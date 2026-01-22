@@ -3,50 +3,37 @@
 BD::BD(QObject *parent)
     : QObject{parent}
 {
-
-
     dataBase = QSqlDatabase::addDatabase("QPSQL", "searcher");
-
-
-
+}
+BD::~BD()
+{
+    delete read;
+    delete doc;
+    delete wordBD;
+    delete doc_word;
 
 }
-
-
-
-
-
 bool BD::ConnectToDataBase(const QString &path)
 {
-
     QSettings settings(path, QSettings::IniFormat);
     settings.beginGroup("DB");
     qDebug() << "all" << settings.childGroups();
-
     DbConfig cfg;
     cfg.host = settings.value("host").toString();
     cfg.port = settings.value("port").toInt();
     cfg.name = settings.value("database").toString();
     cfg.user = settings.value("user").toString();
     cfg.password = settings.value("password").toString();
-
     settings.endGroup();
-
-
     dataBase.setHostName(cfg.host);
     dataBase.setPort(cfg.port);
     dataBase.setDatabaseName(cfg.name);
     dataBase.setUserName(cfg.user);
     dataBase.setPassword(cfg.password);
 
-
-
-
     if (!dataBase.open()) {
         qCritical() << "no:" << dataBase.lastError();
         return false;
-
-
     }
 
     qDebug() << "yes!";
@@ -55,12 +42,8 @@ bool BD::ConnectToDataBase(const QString &path)
 
 void BD::Select(const QString &request)
 {
-
+delete read;
     read = new QSqlQuery(dataBase);
-
- // read->exec("DROP TABLE IF EXISTS word_documents;");
-  // read->exec("DROP TABLE IF EXISTS words;");
-  // read->exec("DROP TABLE IF EXISTS documents;");
 read->exec(request);
     if (!read->isActive())
     {
@@ -80,14 +63,11 @@ void BD::SendData(QString path, QString name, int size, QDateTime modified_at, Q
     del.bindValue(":path", path);
     del.bindValue(":name", name);
     del.exec();
-
     del.prepare("DELETE FROM documents WHERE path = :path AND name = :name");
     del.bindValue(":path", path);
     del.bindValue(":name", name);
     del.exec();
-
-
-
+    delete doc;
     doc = new QSqlQuery(dataBase);
     doc->prepare("INSERT INTO documents (path, name, size, modified_at) "
                  "VALUES (:path, :name, :size, :modified_at) "
@@ -99,7 +79,7 @@ void BD::SendData(QString path, QString name, int size, QDateTime modified_at, Q
     doc->bindValue(":modified_at", modified_at);
 
     if(! doc->exec()) {
-        qDebug() << "Insert document error:" << doc->lastError();
+        qDebug() << "Insert document error:" << doc->lastError().text();
         return;
     }
     int documentId = -1;
@@ -107,9 +87,9 @@ void BD::SendData(QString path, QString name, int size, QDateTime modified_at, Q
         documentId = doc->value(0).toInt();
 
     for(auto it = word.begin(); it != word.end(); ++it) {
-        QString word = it.key();
+        QString word_key = it.key();
         int frequency = it.value();
-
+       delete wordBD;
         wordBD = new QSqlQuery(dataBase);
         wordBD->prepare("INSERT INTO words (word, total_count) "
                         "VALUES(:word, :count) "
@@ -117,7 +97,7 @@ void BD::SendData(QString path, QString name, int size, QDateTime modified_at, Q
                         "SET total_count = words.total_count + EXCLUDED.total_count "
                         "RETURNING id");
 
-        wordBD->bindValue(":word", word);
+        wordBD->bindValue(":word", word_key);
         wordBD->bindValue(":count", frequency);
 
         if(!wordBD->exec()) {
@@ -128,7 +108,7 @@ void BD::SendData(QString path, QString name, int size, QDateTime modified_at, Q
         int wordId = -1;
         if(wordBD->next())
             wordId = wordBD->value(0).toInt();
-
+        delete doc_word;
         doc_word = new QSqlQuery(dataBase);
         doc_word->prepare("INSERT INTO word_documents "
                           "(word_id, document_id, frequency) "

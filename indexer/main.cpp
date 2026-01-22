@@ -36,16 +36,15 @@ int main(int argc, char *argv[])
     database->Select(request3);
     ind = new Indexer();
     ind->ReadIni(indexer_path);
-
-
-    QObject::connect(ind, &Indexer::sig_SendDataToDB, [database]( QString path,  QString name,
+    QObject::connect(ind, &Indexer::sig_SendDataToDB, [&database]( QString path,  QString name,
                                                                  int size,  QDateTime modified_at,  QMap<QString, int> word)
 {
-
         database->SendData(path, name,  size, modified_at,  word);
 });
     ind->change_text();
+    int ret=a.exec();
+    delete ind;
+    delete database;
 
-
-    return a.exec();
+    return ret;
 }

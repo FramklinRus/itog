@@ -13,7 +13,6 @@
 struct indexer {
     QString path;
     QStringList extensions;
-
 };
 
 
@@ -24,7 +23,7 @@ public:
     explicit Indexer(QObject *parent = nullptr);
     void ReadIni(const QString &path);
     void change_text();
-
+    ~Indexer();
 signals:
     void sig_SendDataToDB(QString path, QString name, int size, QDateTime modified_at, QMap<QString, int> word);
 private:

@@ -23,14 +23,8 @@ public:
     bool ConnectToDataBase(const QString &path);
     void Select(const QString &request);
     void SendData(QString path, QString name, int size, QDateTime modified_at, QMap<QString, int> word);
-
-
-
-
-
+    ~BD();
 signals:
-
-
 private:
     QSqlDatabase dataBase;
     QSqlQuery* read =nullptr;
